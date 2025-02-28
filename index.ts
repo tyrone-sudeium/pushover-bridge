@@ -31,7 +31,7 @@ interface QueuedMessage {
 const dbFile = Bun.file("./message_db.json", {type: "application/json"})
 let db: MessageQueueBody
 
-if (dbFile.size === 0) {
+if (!(await dbFile.exists())) {
     db = {}
 } else {
     const dbFileJSONStr = await dbFile.text()
