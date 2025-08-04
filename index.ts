@@ -74,25 +74,30 @@ function respond200(): Response {
 
 const timers: Map<string, Timer> = new Map();
 
+function authorisationResponse(req: Request): Response | null {
+    // check the PSK
+    const token = req.headers.get("Authorization")
+    if (token !== `Bearer ${PSK}`) {
+        return Response.json(
+        {
+            "type": "error",
+            "result": {
+                "message": "unauthorized"
+            }
+        }, 
+        {
+            status: 401
+        })
+    }
+    return null
+}
+
 serve({
     port: 1414,
     async fetch(req: Request): Promise<Response> {
         const url = new URL(req.url)
         if (url.pathname === "/message_queue.json" && req.method === "POST") {
-            // check the PSK
-            const token = req.headers.get("Authorization")
-            if (token !== `Bearer ${PSK}`) {
-                return Response.json(
-                {
-                    "type": "error",
-                    "result": {
-                        "message": "unauthorized"
-                    }
-                }, 
-                {
-                    status: 401
-                })
-            }
+            { const res = authorisationResponse(req); if (res) return res }
             try {
                 const reqJSON: MessageQueueBody = await req.json()
                 // validate the new message queue
@@ -131,6 +136,10 @@ serve({
             }
         } else if (url.pathname === "/message_queue.json" && req.method === "GET") {
             return Response.json(db)
+        } else if (url.pathname === "/message_queue.json" && req.method === "DELETE") {
+            { const res = authorisationResponse(req); if (res) return res }
+            db = {}
+            syncDb()
         }
         return respond200()
     }
